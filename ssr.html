@@ -1,0 +1,127 @@
+　注册谷歌云服务
+　申请地址: https://cloud.google.com/free/
+　　可免费使用1年，价值300美金。
+　　Google Cloud Platform计算引擎是按小时收费，网络按流量收费.
+　　我们可以算一算:
+　　注册赠送了300美金, 一年免费使用期.
+　　主机选的是微型(最低配置机型), $5/月.
+　　还剩300-5*12=$240, 用于抵扣流量的费用.
+　　谷歌云服务器出口大陆流量1T以内价格约为0.23$/1G.
+　　那么每个月可用流量 = 240/12/0.23 ≈ 86G, 一般日常使用绝对够用, 还可以顺便搭个网站之类的。
+
+　创建实例
+　　直接访问 https://console.cloud.google.com/compute/instances
+或登录GCP控制台后, 点击计算引擎 - 创建实例. 如图:
+alt
+　　名称: 随便填
+　　地区: 建议选asia-east1-c
+　　asia-east1-a, asia-east1-b, asia-east1-c 机房都在中国台湾彰化县, 实测c区更好.
+
+　　机器类型: 选微型(一个共享vCPU)
+　　0.6G内存, 一般加速上网, 看视频, 玩游戏都够用了. 不够再换
+　　启动磁盘: 推荐选CentOS 7.
+　　本文命令都是基于CentOS 7, 如选Debian, Ubuntu等其他系统, 命令会稍有不同。
+
+　生成静态IP
+　　点击网络选项卡--外部IP--创建IP地址.
+　　alt
+
+alt
+
+　　然后会提示输入名称, 任意输入即可(小写字母开头,不能为大写字母)
+　　alt
+
+　登陆创建的服务器并部署SSR
+　登陆谷歌云服务
+　　Google也自带了在线SSH, 实例创建好后, 在列表界面点击SSH - 在浏览器窗口中打开即可进入, 见下图.
+　　alt
+
+　　不过出于个人习惯, 用Xshell本地进行连接管理更方便, 不用每次都打开浏览器进GCP后台.
+
+　运行BBR脚本&升级内核
+　　通过脚本一键升级内核并安装BBR加速.
+
+　　Linux系统中root用户拥有最高权限, 出于安全考虑, GCP默认是以普通用户登录的, 我们需要先切换到root用户, 否则运行某些命令时会提示无权限.
+
+　　先切换到root用户.
+　　Xshell连上服务器后, 输入命令:
+
+sudo -i
+　　依次运行以下4条命令
+
+yum install -y wget
+wget --no-check-certificate https://github.com/teddysun/across/raw/master/bbr.sh
+chmod +x bbr.sh
+./bbr.sh
+　　安装完成后，脚本会提示需要重启VPS，输入 y 并回车后重启, 这时Xshell连接也会自动断开。
+
+　　VPS重启可能需要几分钟, 耐心等待一下.
+
+　　重启完成后，再用Xhell重新连接VPS, sudo -i切换到root用户.
+
+　验证是否成功安装了最新内核并开启BBR
+　　输入以下命令：
+
+　　uname -r
+　　查看内核版本，如果返回值含有4.13或以上版本, 就表示OK了.
+
+　　sysctl net.ipv4.tcp_available_congestion_control
+　　返回值一般为：
+　　net.ipv4.tcp_available_congestion_control = bbr cubic reno
+
+　　sysctl net.ipv4.tcp_congestion_control
+　　返回值一般为：
+　　net.ipv4.tcp_congestion_control = bbr
+
+　　sysctl net.core.default_qdisc
+　　返回值一般为：
+　　net.core.default_qdisc = fq
+
+　　lsmod | grep bbr
+　　返回值有 tcp_bbr 模块即说明bbr已启动。
+
+　一键部署SSR
+　　依次运行以下3条命令 (一行一个):
+
+wget --no-check-certificate -O shadowsocks-all.sh https://raw.githubusercontent.com/teddysun/shadowsocks_install/master/shadowsocks-all.sh
+chmod +x shadowsocks-all.sh
+./shadowsocks-all.sh 2>&1 | tee shadowsocks-all.log
+　　出现提示信息, 选择要安装的版本. 推荐选ShadowsocksR, 输入2, 回车
+
+　　alt
+
+　　设置密码
+
+　　alt
+
+　　设置端口
+　　可选范围1-65535, 建议4位以上, 同时避免设置为常用端口22, 80, 443等.
+
+　　alt
+
+　　选择加密方式 建议选rc4-md5
+
+　　alt　 　
+
+　　选择协议, 建议选auth_sha1_v4
+
+　　alt 　　
+
+　　选择混淆方式, 选tls1.2_ticket_auth
+
+　　alt
+
+　　然后按任意键开始安装.
+
+　　alt
+
+　　耐心等待一下, 安装所需时间根据网速, 机器配置等有所区别, 出现类似下图窗口表示安装完成.
+　　alt
+
+　SSR脚本支持的命令
+SSR启动 | 停止 | 重启 | 查看状态
+
+/etc/init.d/shadowsocks-r start | stop | restart | status
+SSR配置文件路径
+
+/etc/shadowsocks-r/config.json
