@@ -52,3 +52,6 @@ net.ipv4.tcp_available_congestion_control = bbr cubic reno
 
 第三第四步可以合并为一步，通过ShadowsocksR+BBR加速一键安装包
 五、效果
+
+
+centos6装bbr会出错
